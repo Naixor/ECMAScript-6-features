@@ -8,8 +8,8 @@ ECMAScript6是即将更新的下一个ECMAScript标准，预期将于2015年6月
 
 ES6较ES5增加了下述新特性:
 
-- [=>](#arrow)
-- [类](#类)
+- [=>](#=>)
+- [class](#class)
 - [enhanced object literals](#enhanced-object-literals)
 - [template strings](#template-strings)
 - [destructuring](#destructuring)
@@ -32,7 +32,7 @@ ES6较ES5增加了下述新特性:
 
 ## ECMAScript 6新特性
 
-### Arrow
+### =>
 `=>`是一种`function`缩写语法。这种语法类似于C#、Java 8和CoffeeScript。`=>`支持表达式写法和函数语句语句写法。与`function`不同，`=>`分享其周围代码相同的`this`。
 
 ```JavaScript
@@ -110,6 +110,7 @@ var bob = {
 
 // ES5 
 // traceur compile
+$traceurRuntime.options.symbols = true; // 这里编译器每次都会添加这个标记变量，后续ES6->ES5的翻译例子中略
 var $__0 = this; // 由tom中的 =>
 var tom = {
   _name: "Tom",
@@ -144,10 +145,10 @@ func = (input) ->
     }
 }).call(this)
 ```
-#### 译者总结：通俗来讲ES6中的`=>`最类似于CoffeeScript中的`->`，this直接指向包围`=>`结构的代码的外侧一级。但是`=>{}`并不会产生像`->`一样的自带`return`的效果，`=>`则与`->`一样，默认对语句块中的最后一行执行`return`操作。
+#### 译者总结：通俗来讲ES6中的`=>`最类似于CoffeeScript中的`->`(C#与Java中也有，但是译者对于C#和Java中能否清晰的展现出this的影响有点不清楚，只好以Coffee做例，欢迎大家帮忙补充加深理解)，this直接指向包围`=>`结构的代码的外侧一级。但是`=>{}`并不会产生像`->`一样的自带`return`的效果，`=>`则与`->`一样，默认对语句块中的最后一行执行`return`操作。这也是为什么`=>{}`这样的写法不会导致traceur帮助我们做一些额外的工作的原因，由于`return`操作可能会导致递归，这样`=>{return ...}`一样会迫使traceur产生一些处理，细节的处理过程可以阅读[traceur-runtime.js](https://github.com/google/traceur-compiler/blob/master/src/runtime/runtime.js)来了解。
 
-### 类
-ES6 classes are a simple sugar over the prototype-based OO pattern.  Having a single convenient declarative form makes class patterns easier to use, and encourages interoperability.  Classes support prototype-based inheritance, super calls, instance and static methods and constructors.
+### class
+在ES6中，`class`是一种基于prototype实现面向对象模式的语法糖。`class`可以简单方便的声明、创建和使用类，并且鼓励互通性(这里译者理解是相对ES5中种类繁多的实现类的方法，有了一个统一的写法和规范，因此更具有通用性)。`class`支持继承、super函数调用(父类方法调用)、实例、静态方法(static)以及构造函数。
 
 ```JavaScript
 class SkinnedMesh extends THREE.Mesh {
@@ -167,6 +168,149 @@ class SkinnedMesh extends THREE.Mesh {
     return new THREE.Matrix4();
   }
 }
+```
+#### 译者注：这里的例子让人好奇它到底采用的哪一种实现继承、静态方法、类方法等特性的，这里做个简单的es6中class的翻译实验：
+```JavaScript
+// ES 6
+class Car {
+    constructor (name) {
+		this.name = name;
+	}
+	printName () {
+		console.log("im a Car, my name is "+ this.name);
+	}
+	static defaultPro(){
+		console.log("Car")
+	}
+}
+
+class Benz extends Car {
+	constructor (name) {
+		super(name);
+	}
+	printName () {
+		console.log("im a Benz Car, my name is "+ this.name);
+	}
+}
+
+var a = new Car("a");
+a.printName(); // im a Car, my name is a
+Car.defaultPro(); // Car
+
+var b = new Benz("b");
+b.printName(); // im a Benz Car, my name is b
+Benz.defaultPro(); // Car
+
+// ES 5
+// traceur compile
+var Car = function Car(name) {
+  "use strict";
+  this.name = name;
+};
+($traceurRuntime.createClass)(Car, {printName: function() {
+    "use strict";
+    console.log("im a Car, my name is " + this.name);
+  }}, {defaultPro: function() {
+    "use strict";
+    console.log("Car");
+  }});
+var Benz = function Benz(name) {
+  "use strict";
+  $traceurRuntime.superConstructor($Benz).call(this, name); // 注解见下，这里相当于Car.call(this, name)
+};
+var $Benz = Benz;
+($traceurRuntime.createClass)(Benz, {printName: function() {
+    "use strict";
+    console.log("im a Benz Car, my name is " + this.name);
+  }}, {}, Car);
+var a = new Car("a");
+a.printName();
+Car.defaultPro();
+var b = new Benz("b");
+b.printName();
+Benz.defaultPro();
+```
+#### 译者注：通过traceur源码的阅读，我们按照它的逻辑可以还原出一个简单直白的createClass：
+```JavaScript
+function createClass(ctor, object, staticObject, superClass) {
+    Object.defineProperty(object, 'constructor', {
+		value: ctor,
+		configurable: true,
+		enumerable: false,
+		writable: true
+	});
+	if (arguments.length > 3) {
+		if (typeof superClass === 'function')
+			ctor.__proto__ = superClass;
+		ctor.prototype = Object.create(superClass.prototype, Object.getDescriptors(object));
+	} else {
+		ctor.prototype = object;
+	}
+	Object.defineProperty(ctor, 'prototype', {
+		configurable: false,
+		writable: false
+	});
+	return Object.defineProperties(ctor, Object.getDescriptors(staticObject));
+}
+function superConstructor(ctor) {
+    return ctor.__proto__;
+}
+```
+#### 译者注：是一个很好的实现方案之一，与CoffeeScript利用__extends的实现相比,并没有给子类产生额外的__super__，而且相对更安全：
+```JavaScript
+// CoffeeScript 1.7.1
+class Car
+    constructor: (name)->
+		@name = name
+	printName: () ->
+		console.log "im a Car, my name is #{@name}"
+
+class Benz extends Car
+	constructor: (name)->
+		super(name)
+	printName: () ->
+		console.log "im a Benz Car, my name is #{@name}"
+
+// ES 5
+(function() {
+    var Benz, Car,
+        __hasProp = {}.hasOwnProperty,
+        __extends = function(child, parent) {
+        for (var key in parent) {
+            if (__hasProp.call(parent, key)) child[key] = parent[key];
+        }
+        
+        function ctor() {
+            this.constructor = child;
+        }
+        ctor.prototype = parent.prototype;
+        child.prototype = new ctor();
+        child.__super__ = parent.prototype;
+        return child;
+    };
+
+    Car = (function() {
+        function Car(name) {
+            this.name = name;
+        }
+        Car.prototype.printName = function() {
+            return console.log("im a Car, my name is " + this.name);
+        };
+        return Car;
+    })();
+
+    Benz = (function(_super) {
+        __extends(Benz, _super);
+        function Benz(name) {
+            Benz.__super__.constructor.call(this, name);
+        }
+        Benz.prototype.printName = function() {
+            return console.log("im a Benz Car, my name is " + this.name);
+        };
+
+        return Benz;
+    })(Car);
+}).call(this);
 ```
 
 ### Enhanced Object Literals
