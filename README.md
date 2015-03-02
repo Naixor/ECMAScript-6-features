@@ -11,7 +11,7 @@ ES6较ES5增加了下述新特性:
 - [=>](#=>)
 - [class](#class)
 - [强化对象字面量](#强化对象字面量)
-- [template strings](#template-strings)
+- [模板字符串](#模板字符串)
 - [destructuring](#destructuring)
 - [default + rest + spread](#default--rest--spread)
 - [let + const](#let--const)
@@ -60,7 +60,7 @@ var bob = {
 // Bob knows Tom
 // Bob knows Jerry
 ```
-#### 译者注：想更好的理解`=>`语法中的this，可以对比一下ES6翻译成ES5的版本：
+##### 译者注：想更好的理解`=>`语法中的this，可以对比一下ES6翻译成ES5的版本：
 ```JavaScript
 // ES6
 var bob = {
@@ -88,7 +88,7 @@ var bob = {
 
 };
 ```
-#### 译者注：这里我们发现traceur-compiler帮助我们做了一较多的工作，换个角度可能更容易的理解他到底做了什么工作：
+##### 译者注：这里我们发现traceur-compiler帮助我们做了一较多的工作，换个角度可能更容易的理解他到底做了什么工作：
 ```JavaScript
 // ES6
 var tom = {
@@ -131,7 +131,7 @@ var bob = {
 };
 
 ```
-#### 译者注：有点像CoffeeScript中的`->`，不是吗？
+##### 译者注：有点像CoffeeScript中的`->`，不是吗？
 ```JavaScript
 // CoffeeScript 1.7.1
 func = (input) -> 
@@ -145,7 +145,7 @@ func = (input) ->
     }
 }).call(this)
 ```
-#### 译者总结：通俗来讲ES6中的`=>`最类似于CoffeeScript中的`->`(C#与Java中的匿名函数，但是译者对于C#和Java中能否清晰的展现出this的影响有点不清楚，只好以Coffee做例，欢迎大家帮忙补充加深理解)，this直接指向包围`=>`结构的代码的外侧一级。但是`=>{}`并不会产生像`->`一样的自带`return`的效果，`=>`则与`->`一样，默认对语句块中的最后一行执行`return`操作。这也是为什么`=>{}`这样的写法不会导致traceur帮助我们做一些额外的工作的原因，由于`return`操作可能会导致递归，这样`=>{return ...}`一样会迫使traceur产生一些处理，细节的处理过程可以阅读[traceur-runtime.js](https://github.com/google/traceur-compiler/blob/master/src/runtime/runtime.js)来了解。
+##### 译者总结：通俗来讲ES6中的`=>`最类似于CoffeeScript中的`->`(C#与Java中的匿名函数，但是译者对于C#和Java中能否清晰的展现出this的影响有点不清楚，只好以Coffee做例，欢迎大家帮忙补充加深理解)，this直接指向包围`=>`结构的代码的外侧一级。但是`=>{}`并不会产生像`->`一样的自带`return`的效果，`=>`则与`->`一样，默认对语句块中的最后一行执行`return`操作。这也是为什么`=>{}`这样的写法不会导致traceur帮助我们做一些额外的工作的原因，由于`return`操作可能会导致递归，这样`=>{return ...}`一样会迫使traceur产生一些处理，细节的处理过程可以阅读[traceur-runtime.js](https://github.com/google/traceur-compiler/blob/master/src/runtime/runtime.js)来了解。
 
 ### class
 在ES6中，`class`是一种基于prototype实现面向对象模式的语法糖。`class`可以简单方便的声明、创建和使用类，并且鼓励互通性(这里译者理解是相对ES5中种类繁多的实现类的方法，有了一个统一的写法和规范，因此更具有通用性)。`class`支持继承、super函数调用(父类方法调用)、实例、静态方法(static)以及构造函数。
@@ -169,7 +169,7 @@ class SkinnedMesh extends THREE.Mesh {
   }
 }
 ```
-#### 译者注：这里的例子让人好奇它到底采用的哪一种实现继承、静态方法、类方法等特性的，这里做个简单的es6中class的翻译实验：
+##### 译者注：这里的例子让人好奇它到底采用的哪一种实现继承、静态方法、类方法等特性的，这里做个简单的es6中class的翻译实验：
 ```JavaScript
 // ES 6
 class Car {
@@ -230,7 +230,7 @@ var b = new Benz("b");
 b.printName();
 Benz.defaultPro();
 ```
-#### 译者注：通过traceur源码的阅读，我们按照它的逻辑可以还原出一个简单直白的createClass(其真实的实现要严谨的多)：
+##### 译者注：通过traceur源码的阅读，我们按照它的逻辑可以还原出一个简单直白的createClass(其真实的实现要严谨的多)：
 ```JavaScript
 function createClass(ctor, object, staticObject, superClass) {
     Object.defineProperty(object, 'constructor', {
@@ -256,7 +256,7 @@ function superConstructor(ctor) {
     return ctor.__proto__;
 }
 ```
-#### 译者注：是一个很好的实现方案之一，与正常的原型继承实现的思路一致，和CoffeeScript利用__extends()的实现相比，并没有给子类产生额外的__super__，而且相对更安全：
+##### 译者注：是一个很好的实现方案之一，与正常的原型继承实现的思路一致，和CoffeeScript利用__extends()的实现相比，并没有给子类产生额外的__super__，而且相对更安全：
 ```JavaScript
 // CoffeeScript 1.7.1
 class Car
@@ -332,7 +332,7 @@ var obj = {
 };
 ```
 
-#### 译者注：上面的例子让我们感觉到了这个新特性的强大，但事实并非如此：
+##### 译者注：上面的例子让我们感觉到了这个新特性的强大，但事实并非如此：
 ```JavaScript
 var name = "a";
 var Car = {
@@ -359,35 +359,36 @@ console.log(Benz); // { name: 'b', toString: [Function] }
 console.log(Benz.toString()); //{ name: 'a', toString: [Function], prop_42: 42 }
 ```
 
-#### 译者总结：对象定义中的`__proto__`属性，在ES6规范中确实[存在](http://people.mozilla.org/~jorendorff/es6-draft.html#sec-other-additional-features)，对象中函数内的`super`(感觉更像是super指针)的描述也[存在](http://people.mozilla.org/~jorendorff/es6-draft.html#sec-super-keyword)，想一探究竟可以点进去看看。不过总的来说ES6针对对象定义做的改变是很方便的，比如我们就可以更优雅的写一个`Position`方法来返回坐标：
+##### 译者总结：对象定义中的`__proto__`属性，在ES6规范中确实[存在](http://people.mozilla.org/~jorendorff/es6-draft.html#sec-other-additional-features)，对象中函数内的`super`(感觉更像是super指针)的描述也[存在](http://people.mozilla.org/~jorendorff/es6-draft.html#sec-super-keyword)，想一探究竟可以点进去看看。不过总的来说ES6针对对象定义做的改变是很方便的，比如我们就可以更优雅的写一个`Position`方法来返回坐标：
 ```JavaScript
 var Position = (x, y) => {
     return { x, y };
 };
 ```
 
-### Template Strings
-Template strings provide syntactic sugar for constructing strings.  This is similar to string interpolation features in Perl, Python and more.  Optionally, a tag can be added to allow the string construction to be customized, avoiding injection attacks or constructing higher level data structures from string contents.
+### 模板字符串
+模板字符串(template strings)提供拼接字符串所使用的语法糖。这个语法类似于Perl、Python或其他一些语言中的字符串插值语法。你可以选择添加任意的标记以便订制字符串结构、避免字符串注入攻击或者依据字符串的内容构建更高阶的数据结构。
 
 ```JavaScript
-// Basic literal string creation
+// 基本的字符串字面量创建(Basic literal string creation)
 `In JavaScript '\n' is a line-feed.`
 
-// Multiline strings
+// 多行字符串(Multiline strings)
 `In JavaScript this is
  not legal.`
 
-// String interpolation
+// 字符串插值(String interpolation)
 var name = "Bob", time = "today";
 `Hello ${name}, how are you ${time}?`
 
-// Construct an HTTP request prefix is used to interpret the replacements and construction
+// 构造一个HTTP request前缀来专一其中的替换部分和结构(Construct an HTTP request prefix is used to interpret the replacements and construction)
 GET`http://foo.org/bar?a=${a}&b=${b}
     Content-Type: application/json
     X-Credentials: ${credentials}
     { "foo": ${foo},
       "bar": ${bar}}`(myOnReadyStateChangeHandler);
 ```
+
 
 ### Destructuring
 Destructuring allows binding using pattern matching, with support for matching arrays and objects.  Destructuring is fail-soft, similar to standard object lookup `foo["bar"]`, producing `undefined` values when not found.
@@ -655,14 +656,14 @@ Proxies enable creation of objects with the full range of behaviors available to
 
 ```JavaScript
 // Proxying a normal object
-var target = {};
-var handler = {
-  get: function (receiver, name) {
+var target = {};
+var handler = {
+  get: function (receiver, name) {
     return `Hello, ${name}!`;
-  }
-};
+  }
+};
 
-var p = new Proxy(target, handler);
+var p = new Proxy(target, handler);
 p.world === 'Hello, world!';
 ```
 
@@ -672,8 +673,8 @@ var target = function () { return 'I am the target'; };
 var handler = {
   apply: function (receiver, ...args) {
     return 'I am the proxy';
-  }
-};
+  }
+};
 
 var p = new Proxy(target, handler);
 p() === 'I am the proxy';
