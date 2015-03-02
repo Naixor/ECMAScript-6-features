@@ -256,7 +256,7 @@ function superConstructor(ctor) {
     return ctor.__proto__;
 }
 ```
-#### 译者注：是一个很好的实现方案之一，与CoffeeScript利用__extends的实现相比,并没有给子类产生额外的__super__，而且相对更安全：
+#### 译者注：是一个很好的实现方案之一，与正常的原型继承实现的思路一致，和CoffeeScript利用__extends()的实现相比,并没有给子类产生额外的__super__，而且相对更安全：
 ```JavaScript
 // CoffeeScript 1.7.1
 class Car
