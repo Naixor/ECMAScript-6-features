@@ -10,7 +10,7 @@ ES6较ES5增加了下述新特性:
 
 - [=>](#=>)
 - [class](#class)
-- [enhanced object literals](#enhanced-object-literals)
+- [强化对象字面量](#强化对象字面量)
 - [template strings](#template-strings)
 - [destructuring](#destructuring)
 - [default + rest + spread](#default--rest--spread)
@@ -145,7 +145,7 @@ func = (input) ->
     }
 }).call(this)
 ```
-#### 译者总结：通俗来讲ES6中的`=>`最类似于CoffeeScript中的`->`(C#与Java中也有，但是译者对于C#和Java中能否清晰的展现出this的影响有点不清楚，只好以Coffee做例，欢迎大家帮忙补充加深理解)，this直接指向包围`=>`结构的代码的外侧一级。但是`=>{}`并不会产生像`->`一样的自带`return`的效果，`=>`则与`->`一样，默认对语句块中的最后一行执行`return`操作。这也是为什么`=>{}`这样的写法不会导致traceur帮助我们做一些额外的工作的原因，由于`return`操作可能会导致递归，这样`=>{return ...}`一样会迫使traceur产生一些处理，细节的处理过程可以阅读[traceur-runtime.js](https://github.com/google/traceur-compiler/blob/master/src/runtime/runtime.js)来了解。
+#### 译者总结：通俗来讲ES6中的`=>`最类似于CoffeeScript中的`->`(C#与Java中的匿名函数，但是译者对于C#和Java中能否清晰的展现出this的影响有点不清楚，只好以Coffee做例，欢迎大家帮忙补充加深理解)，this直接指向包围`=>`结构的代码的外侧一级。但是`=>{}`并不会产生像`->`一样的自带`return`的效果，`=>`则与`->`一样，默认对语句块中的最后一行执行`return`操作。这也是为什么`=>{}`这样的写法不会导致traceur帮助我们做一些额外的工作的原因，由于`return`操作可能会导致递归，这样`=>{return ...}`一样会迫使traceur产生一些处理，细节的处理过程可以阅读[traceur-runtime.js](https://github.com/google/traceur-compiler/blob/master/src/runtime/runtime.js)来了解。
 
 ### class
 在ES6中，`class`是一种基于prototype实现面向对象模式的语法糖。`class`可以简单方便的声明、创建和使用类，并且鼓励互通性(这里译者理解是相对ES5中种类繁多的实现类的方法，有了一个统一的写法和规范，因此更具有通用性)。`class`支持继承、super函数调用(父类方法调用)、实例、静态方法(static)以及构造函数。
@@ -174,23 +174,23 @@ class SkinnedMesh extends THREE.Mesh {
 // ES 6
 class Car {
     constructor (name) {
-		this.name = name;
-	}
-	printName () {
-		console.log("im a Car, my name is "+ this.name);
-	}
-	static defaultPro(){
-		console.log("Car")
-	}
+    this.name = name;
+  }
+  printName () {
+    console.log("im a Car, my name is "+ this.name);
+  }
+  static defaultPro(){
+    console.log("Car")
+  }
 }
 
 class Benz extends Car {
-	constructor (name) {
-		super(name);
-	}
-	printName () {
-		console.log("im a Benz Car, my name is "+ this.name);
-	}
+  constructor (name) {
+    super(name);
+  }
+  printName () {
+    console.log("im a Benz Car, my name is "+ this.name);
+  }
 }
 
 var a = new Car("a");
@@ -230,46 +230,46 @@ var b = new Benz("b");
 b.printName();
 Benz.defaultPro();
 ```
-#### 译者注：通过traceur源码的阅读，我们按照它的逻辑可以还原出一个简单直白的createClass：
+#### 译者注：通过traceur源码的阅读，我们按照它的逻辑可以还原出一个简单直白的createClass(其真实的实现要严谨的多)：
 ```JavaScript
 function createClass(ctor, object, staticObject, superClass) {
     Object.defineProperty(object, 'constructor', {
-		value: ctor,
-		configurable: true,
-		enumerable: false,
-		writable: true
-	});
-	if (arguments.length > 3) {
-		if (typeof superClass === 'function')
-			ctor.__proto__ = superClass;
-		ctor.prototype = Object.create(superClass.prototype, Object.getDescriptors(object));
-	} else {
-		ctor.prototype = object;
-	}
-	Object.defineProperty(ctor, 'prototype', {
-		configurable: false,
-		writable: false
-	});
-	return Object.defineProperties(ctor, Object.getDescriptors(staticObject));
+    value: ctor,
+    configurable: true,
+    enumerable: false,
+    writable: true
+  });
+  if (arguments.length > 3) {
+    if (typeof superClass === 'function')
+      ctor.__proto__ = superClass;
+    ctor.prototype = Object.create(superClass.prototype, Object.getDescriptors(object));
+  } else {
+    ctor.prototype = object;
+  }
+  Object.defineProperty(ctor, 'prototype', {
+    configurable: false,
+    writable: false
+  });
+  return Object.defineProperties(ctor, Object.getDescriptors(staticObject));
 }
 function superConstructor(ctor) {
     return ctor.__proto__;
 }
 ```
-#### 译者注：是一个很好的实现方案之一，与正常的原型继承实现的思路一致，和CoffeeScript利用__extends()的实现相比,并没有给子类产生额外的__super__，而且相对更安全：
+#### 译者注：是一个很好的实现方案之一，与正常的原型继承实现的思路一致，和CoffeeScript利用__extends()的实现相比，并没有给子类产生额外的__super__，而且相对更安全：
 ```JavaScript
 // CoffeeScript 1.7.1
 class Car
     constructor: (name)->
-		@name = name
-	printName: () ->
-		console.log "im a Car, my name is #{@name}"
+    @name = name
+  printName: () ->
+    console.log "im a Car, my name is #{@name}"
 
 class Benz extends Car
-	constructor: (name)->
-		super(name)
-	printName: () ->
-		console.log "im a Benz Car, my name is #{@name}"
+  constructor: (name)->
+    super(name)
+  printName: () ->
+    console.log "im a Benz Car, my name is #{@name}"
 
 // ES 5
 (function() {
@@ -313,8 +313,8 @@ class Benz extends Car
 }).call(this);
 ```
 
-### Enhanced Object Literals
-Object literals are extended to support setting the prototype at construction, shorthand for `foo: foo` assignments, defining methods, making super calls, and computing property names with expressions.  Together, these also bring object literals and class declarations closer together, and let object-based design benefit from some of the same conveniences.
+### 强化对象字面量
+新版的`对象字面量`支持：在对象构造体中设置原型变量(`__proto__`)、简写版`foo: foo`赋值语句、函数定义、super(父指针)调用以及属性名可以通过表达式计算得出。这些属性也让`对象字面量`和`class`声明走的更近，并让基于对象的设计能够从这些相同的便利中获益。
 
 ```JavaScript
 var obj = {
@@ -329,6 +329,40 @@ var obj = {
     },
     // Computed (dynamic) property names
     [ 'prop_' + (() => 42)() ]: 42
+};
+```
+
+#### 译者注：上面的例子让我们感觉到了这个新特性的强大，但事实并非如此：
+```JavaScript
+var name = "a";
+var Car = {
+    name, // foo : foo的简化赋值，可以使用变量，也可以写成
+  toString(){  // 函数也可以 foo : foo
+    return this.name;
+  },
+  [ 'prop_' + ((a) => ++a)(41) ]: 42 //属性名可以由表达式构成，如匿名函数
+}
+
+var name = "b";
+var Benz = {
+  __proto__: Car, // 由于译者的例子在node(v0.11.16和v0.12.x都测试过)环境下无法使用Object定义中的super关键字，因此这个__proto__属性就未知是否有想象中的那么神奇了
+  name,
+  toString() {
+    // return super.toString(); // 这个super关键字确实在规范中有所定义，但是测试报错："Unexpected reserved word"，也许是还未实现把，who knows...
+        return this.__proto__;
+  } 
+}
+
+console.log(Car); // { name: 'a', toString: [Function], prop_42: 42 }
+console.log(Car.toString()); // a
+console.log(Benz); // { name: 'b', toString: [Function] }
+console.log(Benz.toString()); //{ name: 'a', toString: [Function], prop_42: 42 }
+```
+
+#### 译者总结：对象定义中的`__proto__`属性，在ES6规范中确实[存在](http://people.mozilla.org/~jorendorff/es6-draft.html#sec-other-additional-features)，对象中函数内的`super`(感觉更像是super指针)的描述也[存在](http://people.mozilla.org/~jorendorff/es6-draft.html#sec-super-keyword)，想一探究竟可以点进去看看。不过总的来说ES6针对对象定义做的改变是很方便的，比如我们就可以更优雅的写一个`Position`方法来返回坐标：
+```JavaScript
+var Position = (x, y) => {
+    return { x, y };
 };
 ```
 
