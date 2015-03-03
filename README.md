@@ -131,6 +131,7 @@ var bob = {
 };
 
 ```
+
 ##### 译者注：有点像CoffeeScript中的`->`，不是吗？
 ```JavaScript
 // CoffeeScript 1.7.1
@@ -345,10 +346,11 @@ var Car = {
 
 var name = "b";
 var Benz = {
-  __proto__: Car, // 由于译者的例子在node(v0.11.16和v0.12.x都测试过)环境下无法使用Object定义中的super关键字，因此这个__proto__属性就未知是否有想象中的那么神奇了
+  __proto__: Car, // 由于译者的例子在node(v0.11.16和v0.12.x都测试过)环境下无法使用Object定义中的super关键字，因此这个__proto__属性就未知是否有想象中的那么神奇了，不过Car这个对象内的属性确实会被挂在Benz的原型链上
   name,
   toString() {
-    // return super.toString(); // 这个super关键字确实在规范中有所定义，但是测试报错："Unexpected reserved word"，也许是还未实现把，who knows...
+        // return super.toString(); // 这个super关键字确实在规范中有所定义，但是测试报错："Unexpected reserved word"，也许是还未实现把，who knows...
+        // return this['prop_42']; // 正如所想，这里会成功返回Car中的['prop_42']即42
         return this.__proto__;
   } 
 }
@@ -359,7 +361,43 @@ console.log(Benz); // { name: 'b', toString: [Function] }
 console.log(Benz.toString()); //{ name: 'a', toString: [Function], prop_42: 42 }
 ```
 
-##### 译者总结：对象定义中的`__proto__`属性，在ES6规范中确实[存在](http://people.mozilla.org/~jorendorff/es6-draft.html#sec-other-additional-features)，对象中函数内的`super`(感觉更像是super指针)的描述也[存在](http://people.mozilla.org/~jorendorff/es6-draft.html#sec-super-keyword)，想一探究竟可以点进去看看。不过总的来说ES6针对对象定义做的改变是很方便的，比如我们就可以更优雅的写一个`Position`方法来返回坐标：
+##### 译者注：同样我们贴上上述代码的ES5版本，以供大家感受这期中的奥妙：
+```JavaScript
+// ES 5
+var $__0;
+var name = "a";
+var Car = ($__0 = {}, Object.defineProperty($__0, "name", {
+    value: name,
+    configurable: true,
+    enumerable: true,
+    writable: true
+}), Object.defineProperty($__0, "toString", {
+    value: function() {
+        return this.name;
+    },
+    configurable: true,
+    enumerable: true,
+    writable: true
+}), Object.defineProperty($__0, 'prop_' + ((function(a) {
+        return ++a;
+    }))(41), {
+    value: 42,
+    configurable: true,
+    enumerable: true,
+    writable: true
+}), $__0);
+
+var name = "b";
+var Benz = {
+    __proto__: Car,
+    name: name,
+    toString: function() {
+        return this.__proto__;
+    }
+};
+```
+
+##### 译者总结：对象定义中的`__proto__`属性，在ES6规范中确实[存在](http://people.mozilla.org/~jorendorff/es6-draft.html#sec-other-additional-features)，对象中函数内的`super`(感觉更像是super指针)的描述也[存在](http://people.mozilla.org/~jorendorff/es6-draft.html#sec-super-keyword)。目前版本能继承父Object的异名属性，同名属性由于JS原型链的机制无法取到，正如翻译过后的ES5代码，要达到能使用super的版本还是蛮容易的，看traceur何时更新了。不过总的来说ES6针对对象定义做的改变是很方便的，比如我们就可以更优雅的写一个`Position`方法来返回坐标：
 ```JavaScript
 var Position = (x, y) => {
     return { x, y };
@@ -381,7 +419,7 @@ var Position = (x, y) => {
 var name = "Bob", time = "today";
 `Hello ${name}, how are you ${time}?`
 
-// 构造一个HTTP request前缀来专一其中的替换部分和结构(Construct an HTTP request prefix is used to interpret the replacements and construction)
+// 构造一个GET前缀来解释其中的替换部分和结构(Construct an HTTP request prefix is used to interpret the replacements and construction)
 GET`http://foo.org/bar?a=${a}&b=${b}
     Content-Type: application/json
     X-Credentials: ${credentials}
@@ -389,6 +427,128 @@ GET`http://foo.org/bar?a=${a}&b=${b}
       "bar": ${bar}}`(myOnReadyStateChangeHandler);
 ```
 
+##### 译者注：我们来详细的揣摩一下这个新的特性究竟能带来什么吧。
+```JavaScript
+// 基本用法
+console.log(`Hello Template Strings!`);
+// output: Hello Template  Strings!
+
+// 多行表达
+console.log(`Hello
+    Template
+Strings!`);
+/* output:  |Hello
+ *          |  Template  
+ *          |Strings!
+ */        
+
+// 变量插值
+var who = "Template Strings"; // var who = `Template Strings`; 这俩结果一样
+console.log(`Hello ${who}!`);
+// output: Hello Template  Strings!
+
+// 函数插值
+function what() {
+    return "Template Strings";
+}
+console.log(`Hello ${ what() }!`);
+// output: Hello Template  Strings!
+
+// 属性插值
+var which = {
+    value: "Template Strings"
+}
+console.log(`Hello ${ which.value }!`);
+// output: Hello Template  Strings!
+
+// 模板字符串的前缀，这里构造一个请求天气情况的GET函数，帮助大家感受一下这个特性
+var url = "http://php.weather.sina.com.cn/iframe/index/w_cl.php";
+var city = "北京";
+GET`${ url }?code=js&city=${ city }`(handler)
+
+function GET(strArgs, url, city) {
+    // console.log(Array.prototype.slice.call(arguments)); // output:  [[ '', '?code=js&city=', '' ], 'http://php.weather.sina.com.cn/iframe/index/w_cl.php', '北京' ]  
+    return function (handler) {
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', `${ url }${ strArgs.join('') }${ city }`, false);
+        xhr.onreadystatechange = handler.bind(xhr);
+        xhr.send();
+    }
+}
+function handler() {
+    if (this.readyState === 4) {
+        console.log(this.responseText);
+    }
+}
+/*  output(在浏览其中运行):
+ *    (function(){var w=[];w['北京']=[{s1:'晴',s2:'晴',f1:'qing',f2:'qing',t1:'4',t2:'-4',p1:'5-6',p2:'3-4',d1:'北风',d2:'北风'}];var add={now:'2015-03-03 13:06:46',time:'1425359206',update:'北京时间03月03日08:05更新',error:'0',total:'1'};window.SWther={w:w,add:add};})();//0
+ */
+```
+
+##### 译者注：基本用法也就这样，前缀函数这个特性还真是让人觉得眼前一亮，它的原理也不难猜出，直接对比一下上述代码的ES5版本，很容易的知道这一特性的真面目
+```JavaScript
+// ES 5
+var $__0 = Object.freeze(Object.defineProperties(["", "?code=js&city=", ""], {raw: {value: Object.freeze(["", "?code=js&city=", ""])}}));
+
+console.log("Hello Template Strings!");
+
+console.log("Hello\n\tTemplate\nStrings!");
+
+var who = "Template Strings";
+console.log(("Hello " + who + "!"));
+
+function what() {
+    return "Template Strings";
+}
+console.log(("Hello " + what() + "!"));
+
+var which = {value: "Template Strings"};
+console.log(("Hello " + which.value + "!"));
+
+var url = "http://php.weather.sina.com.cn/iframe/index/w_cl.php";
+var city = "北京";
+GET($__0, url, city)(handler);
+function GET(strArgs, url, city) {
+    return function(handler) {
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', ("" + url + strArgs.join('') + city), false);
+        xhr.onreadystatechange = handler.bind(xhr);
+        xhr.send();
+    };
+}
+function handler() {
+    if (this.readyState === 4) {
+        console.log(this.responseText);
+    }
+}
+```
+
+##### 译者注：\`...\`简单来说被当做\(...\)来翻译了，其余部分一次替换就好了。需要额外说明的是字符串模板的前缀函数接受n个参数，第一个参数为字符串构成数组(如上述例子中的[ '', '?code=js&city=', '' ])，剩余参数依次是被替换的字符变量(如上述例子中的'http://php.weather.sina.com.cn/iframe/index/w_cl.php', '北京')。下面我们提供一种在前缀函数中还原原字符串的方法，方便大家理解其中的对应关系
+```JavaScript
+// 首先对应的位置关系为：func(strArg, arg1, arg2, arg3...)
+// 原字符串 = strArg[0] + arg1 + strArg[1] + arg2 + strArg[2] + arg3 + strArg[3]...
+// 即将参数strArg后的arg一次填到strArg的数组间隙中，为原来字符串的对应位置顺序
+
+var url = "php.weather.sina.com.cn/iframe/index/w_cl.php";
+var city = "北京";
+
+console.log( FUN`http://${ url }?code=js&city=${ city }` );
+
+function FUN() {
+    var args = Array.prototype.slice.call(arguments);
+    console.log(args)
+    var strArr = [];
+    var i = 0;
+    return Array.prototype.join.call((args[0].forEach((function(length){
+        return function(el, index) {
+            strArr.push(el);
+            if (index !== length-1) {
+                strArr.push(args[++i])
+            }
+        }
+    })(args[0].length)), strArr), '');
+}
+```
 
 ### Destructuring
 Destructuring allows binding using pattern matching, with support for matching arrays and objects.  Destructuring is fail-soft, similar to standard object lookup `foo["bar"]`, producing `undefined` values when not found.
