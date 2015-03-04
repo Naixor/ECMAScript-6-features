@@ -12,7 +12,7 @@ ES6较ES5增加了下述新特性:
 - [class](#class)
 - [强化对象字面量](#强化对象字面量)
 - [模板字符串](#模板字符串)
-- [destructuring](#destructuring)
+- [解构](#解构)
 - [default + rest + spread](#default--rest--spread)
 - [let + const](#let--const)
 - [iterators + for..of](#iterators--forof)
@@ -404,6 +404,8 @@ var Position = (x, y) => {
 };
 ```
 
+##### 译者补充：通过在github与traceur作者的沟通，对象中的`super`无法使用是由于traceur-compiler团队还未增加这部分的处理，并无大碍，等待下个版本就好了。
+
 ### 模板字符串
 模板字符串(template strings)提供拼接字符串所使用的语法糖。这个语法类似于Perl、Python或其他一些语言中的字符串插值语法。你可以选择添加任意的标记以便订制字符串结构、避免字符串注入攻击或者依据字符串的内容构建更高阶的数据结构。
 
@@ -550,34 +552,127 @@ function FUN() {
 }
 ```
 
-### Destructuring
-Destructuring allows binding using pattern matching, with support for matching arrays and objects.  Destructuring is fail-soft, similar to standard object lookup `foo["bar"]`, producing `undefined` values when not found.
+##### 译者总结：这个特性着实方便，32个赞。用法简单，功能强大，不太会出其他问题，很容易理解。对于新增的前缀函数也是蛮有意思的，观察它翻译成ES5的代码，我们可以扩展出很多别的写法。
+
+### 解构
+解构(Destructuring)允许JS通过数组匹配和对象匹配这两种方式进行模式匹配赋值。解构失败也是安全，这类似于标准的对象属性获取`foo["bar"]`，如果对象中没能找到对应值则产生`undefined`。
 
 ```JavaScript
-// list matching
+// 列表匹配(list matching)
 var [a, , b] = [1,2,3];
 
-// object matching
+// 对象匹配(object matching)
 var { op: a, lhs: { op: b }, rhs: c }
        = getASTNode()
 
-// object matching shorthand
+// 简化版对象匹配(object matching shorthand)
 // binds `op`, `lhs` and `rhs` in scope
 var {op, lhs, rhs} = getASTNode()
 
-// Can be used in parameter position
+// 可以在参数对位上发挥作用(Can be used in parameter position)
 function g({name: x}) {
   console.log(x);
 }
 g({name: 5})
 
-// Fail-soft destructuring
+// 解构失败(Fail-soft destructuring)
 var [a] = [];
 a === undefined;
 
-// Fail-soft destructuring with defaults
+// 带有默认值的失败的解构(Fail-soft destructuring with defaults)
 var [a = 1] = [];
 a === 1;
+```
+
+##### 译者注：借鉴了CoffeeScript的写法，也是一个非常方便的新特性。规则比较容易理解，排除上述那些基本规则，这个新的语法还有一些地方需要人们注意。
+```JavaScript
+// 解构报错，类似的写法都会导致这个问题
+var [a, b] = undefined;
+var [a, b] = Object.create(null);
+var [a, b] = null;
+
+// 不完全模式匹配
+var {toString: a} = [0, 1];
+console.log(a === Array.prototype.toString); // true
+
+var [a, b] = "12";
+console.log(a, b); // 1 2
+
+var [a, b] = [function(){console.log(this)}, function(){return a}];
+a();  // undefined
+console.log(a === b()); // true
+
+var func = function(){console.log(this)};
+var [a, b] = [func, function(){return a}];
+func();
+a();  // undefined
+console.log(a === b()); // true
+
+var [{ name }] = [function funa(){console.log(this)}, function(){return fa}];
+funa(); // TypeError: funa is not defined
+console.log(name); // funa
+
+var length;
+[length] = [2];
+console.log(length); // 2
+({length} = [2]); // 这里注意：{length} = [2]和({length}) = [2] 这两种写法都会导致解释器将{}误以为是代码块而报错
+console.log(length); // 1
+```
+
+##### 译者注：同样我们帖上转义成ES5的代码，方便大家理解起原理
+```JavaScript
+var $__2,
+    $__3,
+    $__5,
+    $__6,
+    $__8,
+    $__9,
+    $__11,
+    $__12,
+    $__13,
+    $__14,
+    $__16,
+    $__17,
+    $__18,
+    $__19;
+var a = [0, 1].toString;
+console.log(a === Array.prototype.toString);
+var $__1 = "12",
+    a = ($__2 = $__1[$traceurRuntime.toProperty($traceurRuntime.toProperty(Symbol.iterator))](), ($__3 = $__2.next()).done ? void 0 : $__3.value),
+    b = ($__3 = $__2.next()).done ? void 0 : $__3.value;
+console.log(a, b);
+var $__4 = [function() {
+  console.log(this);
+}, function() {
+  return a;
+}],
+    a = ($__5 = $__4[$traceurRuntime.toProperty($traceurRuntime.toProperty(Symbol.iterator))](), ($__6 = $__5.next()).done ? void 0 : $__6.value),
+    b = ($__6 = $__5.next()).done ? void 0 : $__6.value;
+a();
+console.log(a === b());
+var func = function() {
+  console.log(this);
+};
+var $__7 = [func, function() {
+  return a;
+}],
+    a = ($__8 = $__7[$traceurRuntime.toProperty($traceurRuntime.toProperty(Symbol.iterator))](), ($__9 = $__8.next()).done ? void 0 : $__9.value),
+    b = ($__9 = $__8.next()).done ? void 0 : $__9.value;
+func();
+a();
+console.log(a === b());
+var name = ($__13 = [function funa() {
+  console.log(this);
+}, function() {
+  return fa;
+}][$traceurRuntime.toProperty($traceurRuntime.toProperty(Symbol.iterator))](), ($__14 = $__13.next()).done ? void 0 : $__14.value).name;
+funa();
+console.log(name);
+var length;
+($__16 = [2], length = ($__17 = $__16[$traceurRuntime.toProperty($traceurRuntime.toProperty(Symbol.iterator))](), ($__18 = $__17.next()).done ? void 0 : $__18.value), $__16);
+console.log(length);
+(($__19 = [2], length = $__19.length, $__19));
+console.log(length);
 ```
 
 ### Default + Rest + Spread
