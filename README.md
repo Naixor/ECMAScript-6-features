@@ -13,7 +13,7 @@ ES6较ES5增加了下述新特性:
 - [强化对象字面量](#强化对象字面量)
 - [模板字符串](#模板字符串)
 - [解构](#解构)
-- [default + rest + spread](#default--rest--spread)
+- [默认值 + `...`语法](#默认值 + `...`语法)
 - [let + const](#let--const)
 - [iterators + for..of](#iterators--forof)
 - [generators](#generators)
@@ -132,7 +132,7 @@ var bob = {
 
 ```
 
-##### 译者注：有点像CoffeeScript中的`->`，不是吗？
+##### 译者注：非常类似CoffeeScript中的`->`，需要注意的是假如你希望`() => {value: 1}`这样返回一个对象，需要让traceur不要将`{}`理解为代码块，因此这样写即可`() => ({value: 1})`。
 ```JavaScript
 // CoffeeScript 1.7.1
 func = (input) -> 
@@ -587,17 +587,31 @@ a === 1;
 ##### 译者注：借鉴了CoffeeScript的写法，也是一个非常方便的新特性。规则比较容易理解，排除上述那些基本规则，这个新的语法还有一些地方需要人们注意。
 ```JavaScript
 // 解构报错，类似的写法都会导致这个问题
-var [a, b] = undefined;
-var [a, b] = Object.create(null);
-var [a, b] = null;
+// var [a, b] = undefined;
+// var [a, b] = Object.create(null);
+// var [a, b] = null;
 
 // 不完全模式匹配
 var {toString: a} = [0, 1];
 console.log(a === Array.prototype.toString); // true
+console.log(toString); // undefined
 
+/*
+ * 注意这里的异同
+ */
+var {toString} = [1, 2];
+console.log(toString === Array.prototype.toString); // true
+
+/*
+ * 字符串由于本身带有与数组相同的属性(索引、length等)，因此这里会被理解成 var [a, b] = ['1', '2']。
+ * 究其根本原因是由于traceur将这类写法的等号右侧使用迭代器(iterators)来匹配相同属性。
+ */
 var [a, b] = "12";
 console.log(a, b); // 1 2
 
+/*
+ * 这个特性可以很方便的用来抽取某个对象中的几个的函数，比如`var [eval, log, sqrt] = require('mathjs')`;
+ */
 var [a, b] = [function(){console.log(this)}, function(){return a}];
 a();  // undefined
 console.log(a === b()); // true
@@ -612,71 +626,79 @@ var [{ name }] = [function funa(){console.log(this)}, function(){return fa}];
 funa(); // TypeError: funa is not defined
 console.log(name); // funa
 
+/*
+ * 使用对象模式匹配时若`{}`并未跟在`var`后面，会导致traceur将`{}`理解为代码块而产生语法错误。
+ * 注意：`{length} = [2]`和`({length}) = [2]` 这两种写法都会导致解释器将{}误以为是代码块而报错
+ */
 var length;
 [length] = [2];
 console.log(length); // 2
-({length} = [2]); // 这里注意：{length} = [2]和({length}) = [2] 这两种写法都会导致解释器将{}误以为是代码块而报错
+({length} = [2]);
 console.log(length); // 1
 ```
 
 ##### 译者注：同样我们帖上转义成ES5的代码，方便大家理解起原理
 ```JavaScript
-var $__2,
-    $__3,
-    $__5,
+var $__3,
+    $__4,
     $__6,
-    $__8,
+    $__7,
     $__9,
-    $__11,
+    $__10,
     $__12,
     $__13,
     $__14,
-    $__16,
+    $__15,
     $__17,
     $__18,
-    $__19;
+    $__19,
+    $__20;
 var a = [0, 1].toString;
 console.log(a === Array.prototype.toString);
-var $__1 = "12",
-    a = ($__2 = $__1[$traceurRuntime.toProperty($traceurRuntime.toProperty(Symbol.iterator))](), ($__3 = $__2.next()).done ? void 0 : $__3.value),
-    b = ($__3 = $__2.next()).done ? void 0 : $__3.value;
+var toString = [1, 2].toString;
+console.log(toString === Array.prototype.toString);
+var $__2 = "12",
+    a = ($__3 = $__2[$traceurRuntime.toProperty($traceurRuntime.toProperty(Symbol.iterator))](), ($__4 = $__3.next()).done ? void 0 : $__4.value),
+    b = ($__4 = $__3.next()).done ? void 0 : $__4.value;
 console.log(a, b);
-var $__4 = [function() {
+var $__5 = [function() {
   console.log(this);
 }, function() {
   return a;
 }],
-    a = ($__5 = $__4[$traceurRuntime.toProperty($traceurRuntime.toProperty(Symbol.iterator))](), ($__6 = $__5.next()).done ? void 0 : $__6.value),
-    b = ($__6 = $__5.next()).done ? void 0 : $__6.value;
+    a = ($__6 = $__5[$traceurRuntime.toProperty($traceurRuntime.toProperty(Symbol.iterator))](), ($__7 = $__6.next()).done ? void 0 : $__7.value),
+    b = ($__7 = $__6.next()).done ? void 0 : $__7.value;
 a();
 console.log(a === b());
 var func = function() {
   console.log(this);
 };
-var $__7 = [func, function() {
+var $__8 = [func, function() {
   return a;
 }],
-    a = ($__8 = $__7[$traceurRuntime.toProperty($traceurRuntime.toProperty(Symbol.iterator))](), ($__9 = $__8.next()).done ? void 0 : $__9.value),
-    b = ($__9 = $__8.next()).done ? void 0 : $__9.value;
+    a = ($__9 = $__8[$traceurRuntime.toProperty($traceurRuntime.toProperty(Symbol.iterator))](), ($__10 = $__9.next()).done ? void 0 : $__10.value),
+    b = ($__10 = $__9.next()).done ? void 0 : $__10.value;
 func();
 a();
 console.log(a === b());
-var name = ($__13 = [function funa() {
+var name = ($__14 = [function funa() {
   console.log(this);
 }, function() {
   return fa;
-}][$traceurRuntime.toProperty($traceurRuntime.toProperty(Symbol.iterator))](), ($__14 = $__13.next()).done ? void 0 : $__14.value).name;
+}][$traceurRuntime.toProperty($traceurRuntime.toProperty(Symbol.iterator))](), ($__15 = $__14.next()).done ? void 0 : $__15.value).name;
 funa();
 console.log(name);
 var length;
-($__16 = [2], length = ($__17 = $__16[$traceurRuntime.toProperty($traceurRuntime.toProperty(Symbol.iterator))](), ($__18 = $__17.next()).done ? void 0 : $__18.value), $__16);
+($__17 = [2], length = ($__18 = $__17[$traceurRuntime.toProperty($traceurRuntime.toProperty(Symbol.iterator))](), ($__19 = $__18.next()).done ? void 0 : $__19.value), $__17);
 console.log(length);
-(($__19 = [2], length = $__19.length, $__19));
+(($__20 = [2], length = $__20.length, $__20));
 console.log(length);
 ```
 
-### Default + Rest + Spread
-Callee-evaluated default parameter values.  Turn an array into consecutive arguments in a function call.  Bind trailing parameters to an array.  Rest replaces the need for `arguments` and addresses common cases more directly.
+##### 译者总结：解构的ES5转义版本有些让人摸不到头脑，感觉是它构造了一个迭代器遍历访问对应的属性，有就返回没有就返回undefined。
+
+### 默认值 + `...`语法
+默认值(Default)可以决定被调函数的默认参数数值。在函数调用过程中将连续的参数放入一个数组中或者将某个参数之后的后续参数放入一个数组中，`...`(Rest + Spreed)就是那个数组(`...`有两种使用属性：Rest和Spread)。`...`(Rest)可以替换原先对于`arguments`的需求，相比`arguments`它更直接的针对通常的使用需求。`...`(Spread)则将一个数组中的数值按顺序直接安插到函数的参数中或者是安插到某一个参数的后续参数中，就好比`...`(Rest)逆过程。
 
 ```JavaScript
 function f(x, y=12) {
