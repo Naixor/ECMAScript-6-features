@@ -722,6 +722,66 @@ function f(x, y, z) {
 f(...[1,2,3]) == 6
 ```
 
+##### 译者注：这个语法特性针对的是函数的实参，其实我们可以将这三种特性总结为ES6中的实参用法。这三种特性可以让我们在对于函数参数的处理上省去一部分代码和时间。大家也很容易就能猜到究竟省去的是哪一部分代码。
+```JavaScript
+function f(x) {
+    var y = arguments[1] !== (void 0) ? arguments[1] : 12;
+    return x + y;
+}
+f(3);
+
+function f(x) {
+    for (var y = [],$__0 = 1; $__0 < arguments.length; $__0++)
+        y[$traceurRuntime.toProperty($__0 - 1)] = arguments[$traceurRuntime.toProperty($__0)];
+    return x * y.length;
+}
+f(3, "hello", true);
+
+function f(x, y, z) {
+    return x + y + z;
+}
+f.apply((void 0), $traceurRuntime.spread([1, 2, 3])); // 这个spread函数会返回一个参数数组(类似Array.prototype.slice.call(arguments))，不过其内部是由迭代器实现，遍历arguments并将其内容放入数组中
+```
+
+##### 译者注：关于这个属性的实现使用中了`apply`不免让人担心`this`是否能保持原有不变，事实上这个不必担心，traceur在实现这个的过程中会标记当前上下文的变化copy一份供`apply`使用。
+```JavaScript
+// ES 6
+class Vector  {
+    constructor(x = 0, y = 0) {
+        this.x = x;
+        this.y = y;
+    }
+    equal(...v) {
+        var x = v[0], y= v[1];
+        return (!!(''+x) && !!(''+y)) ?  this.x === x && this.y === y : false;
+    }
+}
+var v1 = new Vector();
+console.log(v1.equal(...[0, 0])); // true
+
+// ES 5
+var $__3;
+var Vector = function Vector() {
+    "use strict";
+    var x = arguments[0] !== (void 0) ? arguments[0] : 0;
+    var y = arguments[1] !== (void 0) ? arguments[1] : 0;
+    this.x = x;
+    this.y = y;
+};
+($traceurRuntime.createClass)(Vector, {equal: function() {
+    "use strict";
+    for (var v = [], $__2 = 0; $__2 < arguments.length; $__2++)
+        v[$traceurRuntime.toProperty($__2)] = arguments[$traceurRuntime.toProperty($__2)];
+    var x = v[0],
+        y = v[1];
+    return (!!('' + x) && !!('' + y)) ? this.x === x && this.y === y : false;
+  }}, {});
+var v1 = new Vector();
+console.log(($__3 = v1).equal.apply($__3, $traceurRuntime.spread([0, 0])));
+```
+
+##### 译者总结：原版中将这个属性归为三类(Default, Rest, Spread)。但其本质均为对`arguments`的二次封装，为了方便编码时形参和实参的处理，使用上并未发现有坑，不过在翻译上期待完美的汉译方案。
+
 ### Let + Const
 Block-scoped binding constructs.  `let` is the new `var`.  `const` is single-assignment.  Static restrictions prevent use before assignment.
 
