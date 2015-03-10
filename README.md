@@ -13,7 +13,7 @@ ES6较ES5增加了下述新特性:
 - [强化对象字面量](#强化对象字面量)
 - [模板字符串](#模板字符串)
 - [解构](#解构)
-- [默认值 + `...`语法](#默认值 + ...语法)
+- [默认值 + ...语法](#默认值 + ...语法)
 - [let和const](#let和const)
 - [iterators + for..of](#iterators--forof)
 - [generators](#generators)
