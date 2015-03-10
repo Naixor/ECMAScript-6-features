@@ -14,7 +14,7 @@ ES6较ES5增加了下述新特性:
 - [模板字符串](#模板字符串)
 - [解构](#解构)
 - [默认值 + `...`语法](#默认值 + `...`语法)
-- [let + const](#let--const)
+- [let和const](#let--const)
 - [iterators + for..of](#iterators--forof)
 - [generators](#generators)
 - [unicode](#unicode)
@@ -782,9 +782,8 @@ console.log(($__3 = v1).equal.apply($__3, $traceurRuntime.spread([0, 0])));
 
 ##### 译者总结：原版中将这个属性归为三类(Default, Rest, Spread)。但其本质均为对`arguments`的二次封装，为了方便编码时形参和实参的处理，使用上并未发现有坑，不过在翻译上期待完美的汉译方案。
 
-### Let + Const
-Block-scoped binding constructs.  `let` is the new `var`.  `const` is single-assignment.  Static restrictions prevent use before assignment.
-
+### Let和Const
+`let`和`const`是针对块级作用域绑定的。`let`与`var`一样，只不过`let`声明的变量只在`let`所在的代码块内有效。`const`是单一赋值，经过一次赋值的变量将无法再次被赋值或修改。变量在赋值前不可用(这段话需要一些特殊的理解详见译者注)。
 
 ```JavaScript
 function f() {
@@ -801,6 +800,187 @@ function f() {
   }
 }
 ```
+
+##### 译者注：参照`let`的[规范定义](http://people.mozilla.org/~jorendorff/es6-draft.html#sec-let-and-const-declarations)，使用`let`和`const`声明的变量在没有呗赋值德清况下无法被访问，但是已经被创建，这意味着`let`以及`const`在本质上具备JS变量提前的特质，但是`let`并没有明显的表现出来。
+```JavaScript
+(function(){
+  {
+    console.log(m); // ReferenceError: m is not defined
+    let m = "m";
+  }
+  {
+    let m;
+    const n = 0;
+    function func1() {
+      console.log(m); // undefined
+      console.log(n); // 0
+      m = n + 1;
+      // n = 1; // n is read-only
+      console.log(m); // 1
+      console.log(n); // 0
+    }
+    func1();
+  }
+  console.log(m, n); // ReferenceError: m, n is not defined
+
+  function func2() {
+    console.log(m);
+    console.log(n); 
+  }
+  func2(); // ReferenceError: m, n is not defined
+})();
+```
+
+##### 译者注：这里还有几个简单例子可以展示`let`的这个特别之处。
+```JavaScript
+// case 1
+var v = "Hello";
+(function(){
+  // 这里代码块内未找到v，只好去当前代码块的上一层查找病引用
+  console.log(v); // output: Hello
+})();
+
+// case 2
+var v = "Hello";
+(function(){
+  // 由于JS的变量提前机制，这里的结果比较好理解
+  console.log(v); // output: undefined
+  var v = "World";
+  console.log(v); // output: World
+})();
+console.log(v); // output: Hello
+
+// case 3
+var v = "Hello";
+(function(){
+  // let还是会遵循变量提前，但是其提前的变量在未发生赋值行为前无法访问，因此出现下面情况
+  console.log(v); // ReferenceError，若v未提前则此处应该会打印Hello
+  let v = "World"; 
+  console.log(v); // output: World
+})();
+console.log(v); // output: Hello
+```
+
+##### 译者注：不过使用traceur来运行上述代码就会产生不一致性，毕竟traceur是在用ES5来解释ES6，毕竟ES5还无法实现`let`和`const`这种变量实质被提前但是在赋值出现前不可访问的性质，因此这种差异，大家了解就好。
+```JavaScript 
+// ES 6
+(function(){
+  {
+    console.log(m); // undefined
+    let m = "m";
+  }
+  {
+    let m;
+    const n = 0;
+    function func1() {
+      console.log(m); // undefined
+      console.log(n); // 0
+      m = n + 1;
+      // n = 1; // n is read-only
+      console.log(m); // 1
+      console.log(n); // 0
+    }
+    func1();
+  }
+  console.log(m, n); // ReferenceError: m, n is not defined
+
+  function func2() {
+    console.log(m, n); 
+  }
+  func2(); // ReferenceError: m, n is not defined
+})();
+
+// ES 5
+(function() {
+  {
+    console.log(m);
+    var m = "m";
+  }
+  {
+    var func1$__1 = function() {
+      console.log(m$__0);
+      console.log(n);
+      m$__0 = n + 1;
+      console.log(m$__0);
+      console.log(n);
+    };
+    var m$__0;
+    var n = 0;
+    func1$__1();
+  }
+  function func2() {
+    console.log(m, n);
+  }
+  func2();
+})();
+```
+
+##### 译者注：`let`可以避免内存泄露以及变量污染，它的很常见的用法就是在`for`循环中使用。
+```JavaScript
+(function(){
+  for (var n = 0; n < 10; n++) {}
+  console.log(n); // output: 10
+
+  for (let i = 0; i < 10; i++) {}
+  console.log(i); // ReferenceError: i is not defined
+
+  var arr = [];
+  for (var n = 0; n < 10; n++) {
+    arr[n] = function(){
+      console.log(n);
+    }
+  }
+  arr[2](); // output: 10
+  var n = 11;
+  arr[2](); // output: 11
+
+  var arr = [];
+  for (let i = 0; i < 10; i++) {
+    arr[i] = function(){
+      console.log(i);
+    };
+  }
+  arr[2](); // output: 2
+})();
+```
+
+##### 译者注：`let`还可以用作表达式写法，`let (var1 [= value1] [, var2 [= value2]] [, ..., varN [= valueN]]) [statement | expression]`;
+```JavaScript
+var a = 5;
+let(a = 6) console.log(a); // 6
+console.log(a); // 5
+
+var x = 5;
+var y = 0;
+let (x = x+10, y = 12) {
+  console.log(x+y); // 27
+}
+console.log(x + y); // 5
+```
+
+##### 译者注：在文档中`const`与`let`机制相似，也是作用在块内，同样会变量提前，但在未赋值前不可被访问。你无从知道`const`究竟有没有提前变量，因为你必须给一个`const`变量赋初始值，否则会语法报错。作用上`const`则是防止变量被修改的，与其他语言中的`const`一样。
+```JavaScript
+var PI = 3;
+const v; // SyntaxError，必须要给const变量一个初始值
+{
+  const PI = 3.14;
+  const PI2 = PI*2;
+  var PI = "PI"; let PI = "PI"; // SyntaxError: Identifier 'PI' has already been declared
+  console.log(PI, PI2); // 3.14 6.28
+  PI = 'PI'; // SyntaxError: Assignment to constant variable.
+}
+console.log(PI); // 3
+
+// const保护的其实是引用，而非真实的值
+const Math = {PI: PI};
+console.log(Math); // {PI: 3}
+Math.PI = 3.14;
+console.log(Math); // {PI: 3.14}
+Math.PI2 = 2 * Math.PI; 
+console.log(Math); // {PI: 3.14, PI2: 6.28}
+```
+
+##### 译者总结：`let`声明的变量会发生变量提前，但只不过在未发生赋值行为前无法被访问，因此会造成`let`作用于其后代码的假象；`const`(文档描述中也有变量提前，实际无法验证)在声明时必须出现对应赋值行为，并且`const`是引用保护而非值保护，因此数组和对象内部的成员变量或者值无法得到保护。
 
 ### Iterators + For..Of
 Iterator objects enable custom iteration like CLR IEnumerable or Java Iterable.  Generalize `for..in` to custom iterator-based iteration with `for..of`.  Don’t require realizing an array, enabling lazy design patterns like LINQ.
