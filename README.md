@@ -15,7 +15,7 @@ ES6较ES5增加了下述新特性:
 - [解构](#解构)
 - [默认值 + `...`语法](#默认值+...语法)
 - [let和const](#let和const)
-- [iterators + for..of](#iterators--forof)
+- [迭代器和for..of](#迭代器和for..of)
 - [generators](#generators)
 - [unicode](#unicode)
 - [modules](#modules)
@@ -740,7 +740,7 @@ f(3, "hello", true);
 function f(x, y, z) {
     return x + y + z;
 }
-f.apply((void 0), $traceurRuntime.spread([1, 2, 3])); // 这个spread函数会返回一个参数数组(类似Array.prototype.slice.call(arguments))，不过其内部是由迭代器实现，遍历arguments并将其内容放入数组中
+f.apply((void 0), $traceurRuntime.spread([1, 2, 3])); // 这个spread函数会返回一个参数数组(类似Array.prototype.slice.call(arguments))，不过其内部是由迭代器(详见[迭代器和for..of](#迭代器和for..of))实现，遍历arguments并将其内容放入数组中
 ```
 
 ##### 译者注：关于这个属性的实现使用中了`apply`不免让人担心`this`是否能保持原有不变，事实上这个不必担心，traceur在实现这个的过程中会标记当前上下文的变化copy一份供`apply`使用。
@@ -780,7 +780,7 @@ var v1 = new Vector();
 console.log(($__3 = v1).equal.apply($__3, $traceurRuntime.spread([0, 0])));
 ```
 
-##### 译者总结：原版中将这个属性归为三类(Default, Rest, Spread)。但其本质均为对`arguments`的二次封装，为了方便编码时形参和实参的处理，使用上并未发现有坑，不过在翻译上期待完美的汉译方案。
+##### 译者总结：原版中将这个属性归为三类(Default, Rest, Spread)。但其本质相当于对`arguments`的二次封装，为了方便编码时形参和实参的处理，使用上并未发现有坑，不过在翻译上期待完美的汉译方案。
 
 ### Let和Const
 `let`和`const`是针对块级作用域绑定的。`let`与`var`一样，只不过`let`声明的变量只在`let`所在的代码块内有效。`const`是单一赋值，经过一次赋值的变量将无法再次被赋值或修改。变量在赋值前不可用(这段话需要一些特殊的理解详见译者注)。
@@ -982,8 +982,8 @@ console.log(Math); // {PI: 3.14, PI2: 6.28}
 
 ##### 译者总结：`let`声明的变量会发生变量提前，但只不过在未发生赋值行为前无法被访问，因此会造成`let`作用于其后代码的假象；`const`(文档描述中也有变量提前，实际无法验证)在声明时必须出现对应赋值行为，并且`const`是引用保护而非值保护，因此数组和对象内部的成员变量或者值无法得到保护。
 
-### Iterators + For..Of
-Iterator objects enable custom iteration like CLR IEnumerable or Java Iterable.  Generalize `for..in` to custom iterator-based iteration with `for..of`.  Don’t require realizing an array, enabling lazy design patterns like LINQ.
+### 迭代器和For..Of
+迭代器对象(Iterator)为ECMAScript提供了通用的迭代器，就像***CLR IEnumerable***还有Java中的***Iterable***。如果想像`for..in`那样遍历迭代器，可以使用`for..of`。并不需要使用任何数组，实现了一个懒人版设计模式，就像***LINQ***一样。
 
 ```JavaScript
 let fibonacci = {
@@ -1006,7 +1006,7 @@ for (var n of fibonacci) {
 }
 ```
 
-Iteration is based on these duck-typed interfaces (using [TypeScript](http://typescriptlang.org) type syntax for exposition only):
+迭代的设计是基于鸭子类型(duck-type)的接口(下面是使用[TypeScript](http://typescriptlang.org)的语法对此接口的描述)：
 ```TypeScript
 interface IteratorResult {
   done: boolean;
@@ -1019,6 +1019,242 @@ interface Iterable {
   [Symbol.iterator](): Iterator
 }
 ```
+
+##### 译者注：`Iterator`对于ECMAScript来说是个新的数据结构，数据结构需要规范的接口描述和定义以方便原有对象(Array,Object)和新增对象的使用。上述接口描述是[规范](http://people.mozilla.org/~jorendorff/es6-draft.html#sec-iteration)对于`Iterator`接口的定义(规范中`@@iterator`函数的名字由`Symbol.iterator`表示)，由于其鸭子类型的设计，任何具备该接口描述的对象或变量均可使用`for..of`来遍历。
+```JavaScript
+{
+  let Iterator = function(val) {
+    let proto = Object.create(null);
+    proto[Symbol.iterator] = {
+      enumerable: true,
+        configurable: true,
+      value: function() {
+        var cur = this;
+        return {
+          next: function() {
+            if (!!cur) {
+              let value = cur.value;
+              cur = cur.next;
+              return {
+                value: value,
+                done: false
+              }
+            }else {
+              return {
+                done: true
+              }
+            }
+          }
+        }
+      }
+    };
+    let __proto__ = Object.create({}, proto);
+    return Object.create(__proto__, {
+      value: {
+        enumerable: true,
+          configurable: true,
+        value: val
+      },
+      next: {
+        writable: true,
+        enumerable: true,
+          configurable: true,
+        value: null
+      }
+    });
+  }
+
+  var a = Iterator(0), b = Iterator(1), c = Iterator(2);
+  a.next = b; 
+  b.next = c ;
+  c.next = null;
+
+  for (var i of a) {
+    console.log(i)
+  }
+  // output: 0 1 2
+}
+{
+  var Iterator = function(val){
+    this.val = val;
+    this.next = null;
+  }
+  Iterator.prototype[Symbol.iterator] = function(){
+    let cur = this;
+    return {
+      next: function(){
+        if (!!cur) {
+          let value = cur.val;
+          cur = cur.next;
+          return {
+            value: value,
+            done: false
+          }
+        }else {
+          return {
+            done: true
+          }
+        }
+      }
+    }
+  }
+  let a = new Iterator(0), b = new Iterator(1), c = new Iterator(2);
+  a.next = b; 
+  b.next = c ;
+  c.next = null;
+
+  for (var i of a) {
+    console.log(i)
+  }
+  // output: 0 1 2
+}
+```
+
+##### 译者注：规范定义的ES6中原生支持`Iterator`的有`String`，`Array`，`Map`和`Set`(详见[map + set + weakmap + weakset](#map--set--weakmap--weakset))这四种数据结构。
+```JavaScript
+let arr = [0, 1, 2, 3, 4, 5, 6, 7];
+for (let i of arr) {
+  console.log(i);
+}
+// output: 0 1 2 3 4 5 6 7
+
+let str = "01234567";
+for (let i of str) {
+  console.log(i);
+}
+// output: 0 1 2 3 4 5 6 7
+
+let set = new Set([0, 1, 2, 3, 4, 5, 6, 7]);
+for (let i of set) {
+  console.log(i);
+}
+// output: 0 1 2 3 4 5 6 7
+
+let map = new Map([[0, 0], [1, 1], [2, 2], [3, 3], [4, 4], [5, 5], [6, 6], [7, 7]]);
+for (let i of map.values()) {
+  console.log(i);
+}
+// output: 0 1 2 3 4 5 6 7
+for (let i of map.keys()) {
+  console.log(i);
+}
+// output: 0 1 2 3 4 5 6 7
+```
+
+##### 译者注：具备`Iterator`接口描述的任何对象都可通过修改`[@@iterator]`方法来改变迭代方式。
+```JavaScript
+{
+  // 下面是按照斐波纳挈数列迭代的实现
+  let arr = [0, 1, 2, 3, 4, 5, 6, 7];
+  arr[Symbol.iterator] = function() {
+    let self = this;
+    let index = 0;
+    let pre = 0,
+      value = 0;
+    return {
+      next: function() {
+        let done = index === self.length;
+        if (!done) {
+          let tmp = self[index++];
+          value = pre + tmp;
+          pre = value;
+          return {
+            value: value,
+            done: done
+          }
+        } else {
+          return {
+            done: done
+          }
+        }
+      }
+    }
+  }
+  for (let i of arr) {
+    console.log(i)
+  }
+  // output: 0 1 3 6 10 15 21 28
+}
+{
+  // 或者这里还可以修改Array本身迭代器的@@iterator，这个修改是针对所有Array对象
+  Array.prototype[Symbol.iterator] = function() {
+    let self = this;
+    let index = 0;
+    let pre = 0,
+      value = 0;
+    return {
+      next: function() {
+        let done = index === self.length;
+        if (!done) {
+          let tmp = self[index++];
+          value = pre + tmp;
+          pre = value;
+          return {
+            value: value,
+            done: done
+          }
+        } else {
+          return {
+            done: done
+          }
+        }
+      }
+    }
+  }
+  let arr = [0, 1, 2, 3, 4, 5, 6, 7];
+  for (let i of arr) {
+    console.log(i)
+  }
+  // output: 0 1 3 6 10 15 21 28 
+}
+```
+
+##### 译者注：`for..of`每次遍历的是`Iterator`对象的`next()`方法，因此在重写`[@@iterator]`时要注意自己的判断以及浮标的处理一定要放在`next()`中。
+```JavaScript
+{
+  // 这个例子永远也无法遍历完毕，他会一直输出，因为index永远都是1
+  let arr = [0, 1, 2, 3, 4, 5, 6, 7];
+  arr[Symbol.iterator] = function() {
+    let self = this;
+    let index = 0;
+    index++;
+    console.log('im hear'); // 这里只打印一次
+    return {
+      next: function() {
+        console.log('im thear'); // 这里打印n次
+        return {
+          done: index === self.length ? true : false,
+          value: self[index-1]
+        }
+      }
+    }
+  }
+  for (let i of arr) {
+    console.log(i)
+  }
+}
+{
+  // 这个例子可以正常工作
+  let arr = [0, 1, 2, 3, 4, 5, 6, 7];
+  arr[Symbol.iterator] = function() {
+    let self = this;
+    let index = 0;
+    return {
+      next: function() {
+        return {
+          done: index === self.length ? true : false,
+          value: self[index++]
+        }
+      }
+    }
+  }
+  for (let i of arr) {
+    console.log(i)
+  }
+}
+```
+
+##### 译者总结：具体特性已经说明，唯一令人比较感兴趣的就是***traceur***是如何处理这部分的翻译的，这部分几句话并不能讲清楚，我会另开地址分析***traceur***中比较有趣的转义实现。
 
 ### Generators
 Generators simplify iterator-authoring using `function*` and `yield`.  A function declared as function* returns a Generator instance.  Generators are subtypes of iterators which include additional  `next` and `throw`.  These enable values to flow back into the generator, so `yield` is an expression form which returns a value (or throws).
