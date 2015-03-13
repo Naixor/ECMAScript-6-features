@@ -16,7 +16,7 @@ ES6较ES5增加了下述新特性:
 - [默认值 + `...`语法](#默认值+...语法)
 - [let和const](#let和const)
 - [迭代器和for..of](#迭代器和for..of)
-- [generators](#generators)
+- [生成器](#生成器)
 - [unicode](#unicode)
 - [modules](#modules)
 - [module loaders](#module-loaders)
@@ -1256,10 +1256,10 @@ for (let i of map.keys()) {
 
 ##### 译者总结：具体特性已经说明，唯一令人比较感兴趣的就是***traceur***是如何处理这部分的翻译的，这部分几句话并不能讲清楚，我会另开地址分析***traceur***中比较有趣的转义实现。
 
-### Generators
-Generators simplify iterator-authoring using `function*` and `yield`.  A function declared as function* returns a Generator instance.  Generators are subtypes of iterators which include additional  `next` and `throw`.  These enable values to flow back into the generator, so `yield` is an expression form which returns a value (or throws).
+### 生成器
+生成器(Generator)使用`function*`和`yield`来简化迭代器的使用。一个使用`function*`方式声明的函数会返回一个生成器的实例。生成器是包含有`next`和`throw`这两种新增属性的迭代器的子类型。这些特性使得变量可以在生成器内形成回流，`yield`就是用来return一个数值(或者throw)的表达式。
 
-Note: Can also be used to enable ‘await’-like async programming, see also ES7 `await` proposal.
+提示：也可以期待***await***-就像异步编程，可以查看ES7中的`await`议案。
 
 ```JavaScript
 var fibonacci = {
@@ -1280,16 +1280,26 @@ for (var n of fibonacci) {
     break;
   console.log(n);
 }
+// output: 1 2 3 5 8 13 21 34 55 89 144 233 377 610 987
 ```
 
-The generator interface is (using [TypeScript](http://typescriptlang.org) type syntax for exposition only):
-
+生成器的接口描述(使用[TypeScript](http://typescriptlang.org)语法表述)：
 ```TypeScript
 interface Generator extends Iterator {
     next(value?: any): IteratorResult;
     throw(exception: any);
 }
 ```
+
+##### 译者注：`function*`本身是Generator的构造函数，它可以返回一个Gernator实例，Generator则是Iterator的子类，因此Gennerator本身也具备迭代器属性也具备@@iterator，因此我们可以简单的理解为`function*`所返回的Generator实例的[@@iterator]方法就是`function*`本身，这个论证可以参见下方例子。如何理解生成器，可以参见规范中给出Generator-Iterator-Function之间的类图
+![](http://people.mozilla.org/~jorendorff/figure-2.png)
+```JavaScript
+function*(){};
+let a = f(); // 或a = new f();
+console.log(a[Symbol.iterator]() === a); // true
+```
+
+##### 译者注：
 
 ### Unicode
 Non-breaking additions to support full Unicode, including new Unicode literal form in strings and new RegExp `u` mode to handle code points, as well as new APIs to process strings at the 21bit code points level.  These additions support building global apps in JavaScript.
