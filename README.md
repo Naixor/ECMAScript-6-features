@@ -1299,7 +1299,216 @@ let a = f(); // 或a = new f();
 console.log(a[Symbol.iterator]() === a); // true
 ```
 
-##### 译者注：
+##### 译者注：在使用上，可以把生成器(Generator)可以当做是迭代器(Iterator)的另一种简化方式。
+```JavaScript
+let arr = [0, 1, 2, 3, 4, 5, 6, 7];
+Array.prototype[Symbol.iterator] = function*() {
+  let index = 0, len = this.length;
+  while(index < len){
+    yield this[index++];
+  }
+}
+for (let i of arr) {
+  console.log(i)
+}
+// output: 0 1 2 3 4 5 6 7
+```
+
+##### 译者注：由于`function*`本身返回一个继承自iterator的对象，你还可以通过不断的使用`next()`来遍历。
+```JavaScript
+let arr = [0, 1, 2, 3, 4, 5, 6, 7];
+function* f(){
+  let index = 0, len = this.length;
+  while(index < len){
+    yield this[index++];
+  }
+}
+let iterator = f.call(arr);
+while(1){
+  let i = iterator.next();
+  if (i.done) {
+    break;
+  }
+  console.log(i.value);
+}
+// output: 0 1 2 3 4 5 6 7
+```
+
+##### 译者注：生成器中的`next()`还可以接受传参。`next()`所接受的参数会体现在上一次`yield`的返回值上，因此对第一次`next()`传参不会造成任何影响。
+```JavaScript
+{
+  function* f(num){
+    while(!(yield num));
+  }
+  let g = f(1);
+  console.log(g.next());  // { value: 1, done: false }
+  console.log(g.next()); // { value: 1, done: false }
+  console.log(g.next(true)); // { value: undefined, done: true }
+}
+{
+  function* addition(num){
+    let r = num;
+    while(1) {
+      r += yield r;
+    }
+  }
+  let g = addition(1);
+  console.log(g.next(1).value); // output: 1
+  console.log(g.next(2).value); // output: 3  (1+2)
+  console.log(g.next(3).value); // output: 6  (3+3)
+  console.log(g.next(4).value); // output: 10  (6+4)
+}
+```
+
+##### 译者注：如果生成器内部的`yield`发生了异常，则不会继续触发执行后续的`yield`。生成器内的异常即可以在生成器外抛出异常，还可以在生成器体内捕获外部异常。
+```JavaScript
+{
+  function* g(){
+    yield 1;
+    yield a;
+    yield b;
+  }
+  function check(g) {
+    let a;
+    try { 
+      a = g.next();
+      a = g.next();
+      a = g.next();
+    }catch(e){
+      console.log(e);
+    }
+  }
+  check(g());
+  /* output: [ReferenceError: a is not defined]
+   *  由于yield会顺序执行，因此异常也是由上而下抛出，当一个yield分支发生异常，则状态机停留在当前状态，
+   *  后续得到next并不会继续触发继续执行后续的yield
+   */
+}
+{
+  function* ErrorHandler(){
+    try {
+      yield v;
+    }catch(e) {
+      console.log('inside: ', e);
+      if(e !== 'error') throw e;
+    }
+  }
+  let eh = ErrorHandler();
+  try {
+    eh.next();
+    eh.throw('error'); // 通过使用throw方法让生成器体内捕获异常
+  }catch(e) {
+    console.log('outside: ', e);
+  }
+  /* output: inside:  [ReferenceError: v is not defined]
+   *         outside:  error
+   */
+}
+```
+
+##### 译者注：生成器还有另一个很实用的特性，可以利用其`yield`的顺序执行和异常阻断的能力来处理异步毁掉陷阱，即使用生成器进行异步流程控制。
+```JavaScript
+// 这是一个常见的嵌套回调
+function a (callback, time){
+  setTimeout(function(){
+    console.log('im function a');
+    callback()
+  }, time);
+}
+function b (callback, time){
+  setTimeout(function(){
+    console.log('im function b');
+    callback()
+  }, time);
+}
+function c (callback, time){
+  setTimeout(function(){
+    console.log('im function c');
+    callback()
+  }, time);
+}
+a(function(){
+  b(function(){
+    c(function(){
+      console.log('ok finished');
+    }, 500);
+  }, 1000)
+}, 500);
+
+// 下面我们使用Generator实现一个类似async的函数来解决异步回调
+let g;
+function tc(err, result) {
+  if (err) throw err;
+  g.next(result);
+}
+
+function* AsyncGernerator(funcs, callback){
+  let v = yield funcs[0](tc);
+  for(let i = 1, l = funcs.length;i < l;i++) {
+    try {
+      v = yield funcs[i](v, tc);
+    }catch(e) {
+      callback(e, v);
+    }
+  }
+  yield callback(null, v);
+}
+
+function async(funcs, callback) {
+  g = AsyncGernerator(funcs, callback);
+  g.next();
+}
+
+async([
+  function (callback){ // a
+    setTimeout(function(){
+      console.log('im function a');
+      callback(null, 1000)
+    }, 500);
+  }
+, function (result, callback){ // b
+    setTimeout(function(){
+      console.log('im function b');
+      callback(null, 500)
+    }, result);
+  }
+, function (result, callback){ // c
+    setTimeout(function(){
+      console.log('im function c');
+      callback(null, 'ok finished')
+    }, result);
+  }
+], function(err, result) {
+  if(err) console.log(err);
+  console.log(result);
+});
+```
+
+##### 译者注：`yield`还可以返回迭代器(Iterator)，不过需要在***yield***后面加上一个*(`yield*`)，以表示其后是一个迭代器。
+```JavaScript
+let arr = [1, 2, [3, [4, [5], 6], [7]], [8, 9], 10];
+function* printAllGenerator() {
+  let l = this.length, i = 0;
+  while(i < l) {
+    v = this[i++];
+    if (Object.prototype.toString.call(v) === '[object Array]') {
+      yield* printAllGenerator.call(v);
+    }else {
+      yield v;      
+    }
+  }
+}
+let printAll = printAllGenerator.call(arr);
+let v = {};
+while(1) {
+  v = printAll.next();
+  if (v.done) break;
+  console.log(v.value);
+}
+// output: 1 2 3 4 5 6 7 8 9 10
+```
+
+##### 译者注：译者认为生成器(Generator)和迭代器(Iterator)是ECMAScript 6新增语法中最为灵活和实用的新特性了，很多更犀利的写法还有待进一步发觉。
 
 ### Unicode
 Non-breaking additions to support full Unicode, including new Unicode literal form in strings and new RegExp `u` mode to handle code points, as well as new APIs to process strings at the 21bit code points level.  These additions support building global apps in JavaScript.
