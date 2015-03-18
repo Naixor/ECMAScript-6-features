@@ -1511,7 +1511,7 @@ while(1) {
 ##### 译者注：译者认为生成器(Generator)和迭代器(Iterator)是ECMAScript 6新增语法中最为灵活和实用的新特性了，很多更犀利的写法还有待进一步发觉。
 
 ### Unicode
-Non-breaking additions to support full Unicode, including new Unicode literal form in strings and new RegExp `u` mode to handle code points, as well as new APIs to process strings at the 21bit code points level.  These additions support building global apps in JavaScript.
+ECMAScript 6中还新增了对Unicode字符集更强大的支持。这些新特性包含下面两点：正则对象中新增了`u`模式用来处理码点大于`0xFFFF`的字符；字符串中也增加了对码点大于`0xFFFF`的处理，包括码点大于`0xFFFF`的字符不会再被当做两个字符和`\u{}`的表示方式。这些新特性有助于我们使用JavaScript进行全平台开发。
 
 ```JavaScript
 // same as ES5.1
@@ -1531,6 +1531,29 @@ for(var c of "𠮷") {
   console.log(c);
 }
 ```
+
+##### 译者注：这里是少有的目前对ECMAScript的支持比较有差异的，在node(0.11.*和0.12.0)环境下测试还不支持正则中的`u`模式，对于四位不能表示全的字符还是会认为它的长度是2，因此这里不做过多介绍了。
+```JavaScript
+{
+  // node 0.12.0
+  console.log("𠮷".length); // 2
+
+  console.log("𠮷".match(/./u)[0].length); // 报错不支持正则u模式
+
+  console.log("\u{20BB7}"); // 报错不支持\u{}
+  console.log("\uD842\uDFB7"); //
+
+  console.log("𠮷".codePointAt(0)); // 134071
+  console.log("𠮷".codePointAt(1)); // 57271
+
+  for(var c of "𠮷") {
+    console.log(c);
+  }
+  // 𠮷
+}
+```
+
+##### 译者总结：目前的规范中是明确说明[ECMAScript 6使用UTF-16](http://people.mozilla.org/~jorendorff/es6-draft.html#sec-source-text)，并且[支持`\u{}`](http://people.mozilla.org/~jorendorff/es6-draft.html#sec-literals-string-literals)来直接表示占位大于四位的字符，期待正式定稿后的结果。
 
 ### Modules
 Language-level support for modules for component definition.  Codifies patterns from popular JavaScript module loaders (AMD, CommonJS). Runtime behaviour defined by a host-defined default loader.  Implicitly async model – no code executes until requested modules are available and processed.
