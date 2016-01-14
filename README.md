@@ -18,12 +18,12 @@ ES6较ES5增加了下述新特性:
 - [迭代器和for..of](#迭代器和for..of)
 - [生成器](#生成器)
 - [unicode](#unicode)
-- [modules](#modules)
-- [module loaders](#module-loaders)
+- [模块](#模块)
+- [模块加载器](#模块加载器)
 - [map + set + weakmap + weakset](#map--set--weakmap--weakset)
 - [proxies](#proxies)
 - [symbols](#symbols)
-- [subclassable built-ins](#subclassable-built-ins)
+- [子类化内建插件](#子类化内建插件)
 - [promises](#promises)
 - [math + number + string + object APIs](#math--number--string--object-apis)
 - [binary and octal literals](#binary-and-octal-literals)
@@ -56,7 +56,7 @@ var bob = {
       console.log(this._name + " knows " + f));
   }
 }
-// bob.printFriends() output: 
+// bob.printFriends() output:
 // Bob knows Tom
 // Bob knows Jerry
 ```
@@ -72,7 +72,7 @@ var bob = {
   }
 }
 
-// ES5 
+// ES5
 // traceur compile
 var bob = {
   _name: "Bob",
@@ -100,7 +100,7 @@ var tom = {
 };
 var bob = {
   _name: "Bob",
-  _friends: ["Tom", "Jerry"], 
+  _friends: ["Tom", "Jerry"],
   printFriends() {
     this._friends.forEach(f => { // 注意这里使用的是statement的表达方式(=> {})
       console.log(this._name + " knows " + f)
@@ -108,7 +108,7 @@ var bob = {
   }
 }
 
-// ES5 
+// ES5
 // traceur compile
 $traceurRuntime.options.symbols = true; // 这里编译器每次都会添加这个标记变量，后续ES6->ES5的翻译例子中略
 var $__0 = this; // 由tom中的 =>
@@ -135,7 +135,7 @@ var bob = {
 ##### 译者注：非常类似CoffeeScript中的`->`，需要注意的是假如你希望`() => {value: 1}`这样返回一个对象，需要让traceur不要将`{}`理解为代码块，因此这样写即可`() => ({value: 1})`。
 ```JavaScript
 // CoffeeScript 1.7.1
-func = (input) -> 
+func = (input) ->
     input
 
 // ES5
@@ -280,7 +280,7 @@ class Benz extends Car
         for (var key in parent) {
             if (__hasProp.call(parent, key)) child[key] = parent[key];
         }
-        
+
         function ctor() {
             this.constructor = child;
         }
@@ -352,7 +352,7 @@ var Benz = {
         // return super.toString(); // 这个super关键字确实在规范中有所定义，但是测试报错："Unexpected reserved word"，也许是还未实现把，who knows...
         // return this['prop_42']; // 正如所想，这里会成功返回Car中的['prop_42']即42
         return this.__proto__;
-  } 
+  }
 }
 
 console.log(Car); // { name: 'a', toString: [Function], prop_42: 42 }
@@ -825,7 +825,7 @@ function f() {
 
   function func2() {
     console.log(m);
-    console.log(n); 
+    console.log(n);
   }
   func2(); // ReferenceError: m, n is not defined
 })();
@@ -855,14 +855,14 @@ var v = "Hello";
 (function(){
   // let还是会遵循变量提前，但是其提前的变量在未发生赋值行为前无法访问，因此出现下面情况
   console.log(v); // ReferenceError，若v未提前则此处应该会打印Hello
-  let v = "World"; 
+  let v = "World";
   console.log(v); // output: World
 })();
 console.log(v); // output: Hello
 ```
 
 ##### 译者注：不过使用traceur来运行上述代码就会产生不一致性，毕竟traceur是在用ES5来解释ES6，毕竟ES5还无法实现`let`和`const`这种变量实质被提前但是在赋值出现前不可访问的性质，因此这种差异，大家了解就好。
-```JavaScript 
+```JavaScript
 // ES 6
 (function(){
   {
@@ -885,7 +885,7 @@ console.log(v); // output: Hello
   console.log(m, n); // ReferenceError: m, n is not defined
 
   function func2() {
-    console.log(m, n); 
+    console.log(m, n);
   }
   func2(); // ReferenceError: m, n is not defined
 })();
@@ -976,7 +976,7 @@ const Math = {PI: PI};
 console.log(Math); // {PI: 3}
 Math.PI = 3.14;
 console.log(Math); // {PI: 3.14}
-Math.PI2 = 2 * Math.PI; 
+Math.PI2 = 2 * Math.PI;
 console.log(Math); // {PI: 3.14, PI2: 6.28}
 ```
 
@@ -1065,7 +1065,7 @@ interface Iterable {
   }
 
   var a = Iterator(0), b = Iterator(1), c = Iterator(2);
-  a.next = b; 
+  a.next = b;
   b.next = c ;
   c.next = null;
 
@@ -1099,7 +1099,7 @@ interface Iterable {
     }
   }
   let a = new Iterator(0), b = new Iterator(1), c = new Iterator(2);
-  a.next = b; 
+  a.next = b;
   b.next = c ;
   c.next = null;
 
@@ -1205,7 +1205,7 @@ for (let i of map.keys()) {
   for (let i of arr) {
     console.log(i)
   }
-  // output: 0 1 3 6 10 15 21 28 
+  // output: 0 1 3 6 10 15 21 28
 }
 ```
 
@@ -1370,7 +1370,7 @@ while(1){
   }
   function check(g) {
     let a;
-    try { 
+    try {
       a = g.next();
       a = g.next();
       a = g.next();
@@ -1553,10 +1553,10 @@ for(var c of "𠮷") {
 }
 ```
 
-##### 译者总结：目前的规范中是明确说明[ECMAScript 6使用UTF-16](http://people.mozilla.org/~jorendorff/es6-draft.html#sec-source-text)，并且[支持`\u{}`](http://people.mozilla.org/~jorendorff/es6-draft.html#sec-literals-string-literals)来直接表示占位大于四位的字符，期待正式定稿后的结果。
+##### 译者总结：目前的规范中是明确说明[ECMAScript 6使用UTF-16](http://people.mozilla.org/~jorendorff/es6-draft.html#sec-source-text)，并且[支持`\u{}`](http://people.mozilla.org/~jorendorff/es6-draft.html#sec-literals-string-literals)来直接表示占位大于四位的字符，期待正式定稿后的结果。不过[Mozilla说明自己不会实现的ES6特性包含了\u{}和正则u模式](https://developer.mozilla.org/en-US/docs/Web/JavaScript/New_in_JavaScript/ECMAScript_6_support_in_Mozilla)
 
-### Modules
-Language-level support for modules for component definition.  Codifies patterns from popular JavaScript module loaders (AMD, CommonJS). Runtime behaviour defined by a host-defined default loader.  Implicitly async model – no code executes until requested modules are available and processed.
+### 模块
+ECMAScript 6在语法层面上提供了对模块组件定义的支持。模式的设计参考非常受开发者喜爱的JavaScript模块加载器(AMD, CommonJS)，运行时的环境由一个主机定义的默认加载器决定。隐式异步模式 —— 只有引用模块可用并且加载完成时代码才会被执行。
 
 ```JavaScript
 // lib/math.js
@@ -1576,7 +1576,7 @@ import {sum, pi} from "lib/math";
 alert("2π = " + sum(pi, pi));
 ```
 
-Some additional features include `export default` and `export *`:
+一些额外的新特性还有有`export default`和`export *`:
 
 ```JavaScript
 // lib/mathplusplus.js
@@ -1592,15 +1592,17 @@ import exp, {pi, e} from "lib/mathplusplus";
 alert("2π = " + exp(pi, e));
 ```
 
-### Module Loaders
-Module loaders support:
-- Dynamic loading
-- State isolation
-- Global namespace isolation
-- Compilation hooks
-- Nested virtualization
+##### 译者注：这个特性虽然感觉很好，traceur未翻译实现这部分的转义，浏览器方面[firefox已经声明这个特性他们尚不支持](https://developer.mozilla.org/en-US/docs/Web/JavaScript/New_in_JavaScript/ECMAScript_6_support_in_Mozilla)，safari也不支持。这样这个特性也就仅仅是个规范而已，我们还是要使用我们所熟悉的类似**requirejs**的库来实现我们的模块化编程。
 
-The default module loader can be configured, and new loaders can be constructed to evaluate and load code in isolated or constrained contexts.
+### 模块加载器
+模块加载器支持以下特性：
+- 动态加载
+- 状态隔离
+- 全局命名空间隔离
+- 编译钩子
+- 多重嵌套虚拟化(循环调用了文件的处理)
+
+模块加载器默认可以配置，新的加载器可以被构建成通过动态或者受限上下文两种方式来执行和加载代码。
 
 ```JavaScript
 // Dynamic loading – ‘System’ is default loader
@@ -1620,7 +1622,7 @@ System.set('jquery', Module({$: $})); // WARNING: not yet finalized
 ```
 
 ### Map + Set + WeakMap + WeakSet
-Efficient data structures for common algorithms.  WeakMaps provides leak-free object-key’d side tables.
+这是常见算法中的几种有效率的数据结构。`WeakMap`实现了无泄露的的对象建端的表结构。
 
 ```JavaScript
 // Sets
@@ -1646,8 +1648,10 @@ ws.add({ data: 42 });
 // Because the added object has no other references, it will not be held in the set
 ```
 
+##### 译者注：`WeakMap`是专门为了解决`Map`在使用对象作为key值时导致对象的引用增加的问题，因此在使用对象作为key值时，建议使用`WeakMap`。也因此`WeakMap`并不支持使用非对象作为key值。`WeakSet`与`WeakMap`类似。
+
 ### Proxies
-Proxies enable creation of objects with the full range of behaviors available to host objects.  Can be used for interception, object virtualization, logging/profiling, etc.
+`Proxies`能够为新对象提供基于原始对象的全方位方法代理。这个特性可以用于拦截，对象虚拟化，日志/分析等。
 
 ```JavaScript
 // Proxying a normal object
@@ -1675,7 +1679,7 @@ var p = new Proxy(target, handler);
 p() === 'I am the proxy';
 ```
 
-There are traps available for all of the runtime-level meta-operations:
+下面是所有可以被代理的运行级别的原操作。
 
 ```JavaScript
 var handler =
@@ -1698,8 +1702,7 @@ var handler =
 ```
 
 ### Symbols
-Symbols enable access control for object state.  Symbols allow properties to be keyed by either `string` (as in ES5) or `symbol`.  Symbols are a new primitive type. Optional `name` parameter used in debugging - but is not part of identity.  Symbols are unique (like gensym), but not private since they are exposed via reflection features like `Object.getOwnPropertySymbols`.
-
+`Symbols`可以控制对象的状态。它允许对象属性的key值可以是`string`或者`symbol`。`Symbol`是新增的原始类型。可选参数`description`。`Symbol`是唯一的，但并不能私有，因为他可以通过使用`Object.getOwnPropertySymbols`这类方法暴露出来。
 
 ```JavaScript
 var MyClass = (function() {
@@ -1724,14 +1727,14 @@ var c = new MyClass("hello")
 c["key"] === undefined
 ```
 
-### Subclassable Built-ins
-In ES6, built-ins like `Array`, `Date` and DOM `Element`s can be subclassed.
+### 子类化内建插件
+ES6诸如`Array`，`Date`和`DOM Element`都可以原生实现子类化功能。
 
-Object construction for a function named `Ctor` now uses two-phases (both virtually dispatched):
-- Call `Ctor[@@create]` to allocate the object, installing any special behavior
-- Invoke constructor on new instance to initialize
+对象通过两种方式来构造`Ctor`函数：
+- 调用`Ctor[@@create]`来分配对象，实现其他行为
+- 唤醒新的实例上的构造函数来完成初始化
 
-The known `@@create` symbol is available via `Symbol.create`.  Built-ins now expose their `@@create` explicitly.
+通过`Symbol.create`可以使用`@@create`这个内建信号变量。`@@create`现在能够被内建插件暴露。
 
 ```JavaScript
 // Pseudo-code of Array
